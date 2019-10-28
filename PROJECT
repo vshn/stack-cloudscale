@@ -1,0 +1,13 @@
+version: "2"
+domain: syn.vshn.ch
+repo: git.vshn.net/syn/stack-cloudscale
+resources:
+- group: cloudscale
+  version: v1alpha1
+  kind: S3Bucket
+- group: cloudscale
+  version: v1alpha1
+  kind: S3BucketClass
+- group: cloudscale
+  version: v1alpha1
+  kind: Provider

@@ -1,0 +1,7 @@
+apiVersion: cloudscale.syn.vshn.ch/v1alpha1
+kind: Provider
+metadata:
+  name: provider-sample
+spec:
+  # Add fields here
+  foo: bar
