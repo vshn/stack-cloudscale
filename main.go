@@ -20,6 +20,7 @@ import (
 	"os"
 
 	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
+	"git.vshn.net/syn/stack-cloudscale/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -61,6 +62,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.S3BucketInstanceController{}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "S3Bucket")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")

@@ -3,5 +3,12 @@ kind: S3Bucket
 metadata:
   name: s3bucket-sample
 spec:
-  # Add fields here
-  foo: bar
+  display_name: testBucket
+  tags:
+    test: one
+  writeConnectionSecretToRef:
+    name: s3sample-cred
+    namespace: crossplane-cloudscale
+  providerRef:
+    name: cloudscale-provider-sample
+  reclaimPolicy: Delete

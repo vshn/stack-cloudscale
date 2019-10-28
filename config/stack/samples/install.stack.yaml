@@ -1,0 +1,7 @@
+---
+apiVersion: stacks.crossplane.io/v1alpha1
+kind: StackInstall
+metadata:
+  name: "syn-stack-cloudscale"
+spec:
+  package: "registry.vshn.net/simon.ruegg/syn/stack-cloudscale"

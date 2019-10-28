@@ -37,11 +37,16 @@ var (
 
 	// S3BucketKindAPIVersion is a convenience variable for the API version string
 	S3BucketKindAPIVersion = S3BucketKind + "." + GroupVersion.String()
-)
 
-// Provider type metadata
-var (
-	ProviderKind             = reflect.TypeOf(Provider{}).Name()
-	ProviderKindAPIVersion   = ProviderKind + "." + GroupVersion.String()
+	// S3BucketGroupVersionKind is a convenience variable to generate the GroupVersionKind
+	S3BucketGroupVersionKind = GroupVersion.WithKind(S3BucketKind)
+
+	// ProviderKind is a convenience variable for the kind string
+	ProviderKind = reflect.TypeOf(Provider{}).Name()
+
+	// ProviderKindAPIVersion is a convenience variable for the API version string
+	ProviderKindAPIVersion = ProviderKind + "." + GroupVersion.String()
+
+	// ProviderGroupVersionKind is a convenience variable to generate the GroupVersionKind
 	ProviderGroupVersionKind = GroupVersion.WithKind(ProviderKind)
 )

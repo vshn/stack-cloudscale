@@ -10,6 +10,9 @@ spec:
   - JSONPath: .spec.classRef.name
     name: CLASS
     type: string
+  - JSONPath: .status.status
+    name: STATUS
+    type: string
   - JSONPath: .metadata.creationTimestamp
     name: AGE
     type: date
@@ -19,8 +22,9 @@ spec:
     listKind: S3BucketList
     plural: s3buckets
     singular: s3bucket
-  scope: Cluster
-  subresources: {}
+  scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: S3Bucket is the Schema for the s3buckets API
@@ -193,6 +197,50 @@ spec:
         status:
           description: S3BucketStatus defines the observed state of S3Bucket
           properties:
+            bindingPhase:
+              description: Phase represents the binding phase of a managed resource
+                or claim. Unbindable resources cannot be bound, typically because
+                they are currently unavailable, or still being created. Unbound resource
+                are available for binding, and Bound resources have successfully bound
+                to another resource.
+              enum:
+              - Unbindable
+              - Unbound
+              - Bound
+              type: string
+            conditions:
+              description: Conditions of the resource.
+              items:
+                description: A Condition that may apply to a managed resource.
+                properties:
+                  lastTransitionTime:
+                    description: LastTransitionTime is the last time this condition
+                      transitioned from one status to another.
+                    format: date-time
+                    type: string
+                  message:
+                    description: A Message containing details about this condition's
+                      last transition from one status to another, if any.
+                    type: string
+                  reason:
+                    description: A Reason for this condition's last transition from
+                      one status to another.
+                    type: string
+                  status:
+                    description: Status of this condition; is it currently True, False,
+                      or Unknown?
+                    type: string
+                  type:
+                    description: Type of this condition. At most one of each condition
+                      type may apply to a resource at any point in time.
+                    type: string
+                required:
+                - lastTransitionTime
+                - reason
+                - status
+                - type
+                type: object
+              type: array
             status:
               type: string
           type: object

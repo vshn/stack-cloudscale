@@ -39,6 +39,8 @@ type S3BucketSpec struct {
 
 // S3BucketStatus defines the observed state of S3Bucket
 type S3BucketStatus struct {
+	runtimev1alpha1.ResourceStatus `json:",inline"`
+
 	Status string `json:"status,omitempty"`
 }
 
@@ -46,8 +48,10 @@ type S3BucketStatus struct {
 
 // S3Bucket is the Schema for the s3buckets API
 // +kubebuilder:printcolumn:name="CLASS",type="string",JSONPath=".spec.classRef.name"
+// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:subresource:status
 type S3Bucket struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
