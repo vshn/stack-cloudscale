@@ -22,9 +22,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
+const (
+	// Group is the group of the objects
+	Group = "cloudscale.syn.vshn.ch"
+
+	// Version is the version of the objects
+	Version = "v1alpha1"
+)
+
 var (
+
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "cloudscale.syn.vshn.ch", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: Group, Version: Version}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
@@ -40,6 +49,15 @@ var (
 
 	// S3BucketGroupVersionKind is a convenience variable to generate the GroupVersionKind
 	S3BucketGroupVersionKind = GroupVersion.WithKind(S3BucketKind)
+
+	// S3BucketClassKind is a convenience variable for the kind string
+	S3BucketClassKind = reflect.TypeOf(S3BucketClass{}).Name()
+
+	// S3BucketClassKindAPIVersion is a convenience variable for the API version string
+	S3BucketClassKindAPIVersion = S3BucketClassKind + "." + GroupVersion.String()
+
+	// S3BucketClassGroupVersionKind is a convenience variable to generate the GroupVersionKind
+	S3BucketClassGroupVersionKind = GroupVersion.WithKind(S3BucketClassKind)
 
 	// ProviderKind is a convenience variable for the kind string
 	ProviderKind = reflect.TypeOf(Provider{}).Name()

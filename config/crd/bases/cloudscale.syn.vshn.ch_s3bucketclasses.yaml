@@ -45,8 +45,11 @@ spec:
           description: SpecTemplate is a template for the spec of a dynamically provisioned
             S3Bucket.
           properties:
-            display_name:
-              description: DisplayName specifies the name of an S3 bucket
+            nameFormat:
+              description: NameFormat specifies the name of the external S3Bucket
+                instance. The first instance of the string '%s' will be replaced with
+                the Kubernetes UID of this S3Bucket. Omit this field to use the UID
+                alone as the name.
               type: string
             providerRef:
               description: ProviderReference specifies the provider that will be used

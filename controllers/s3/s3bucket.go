@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package s3
 
 import (
 	"context"
@@ -43,14 +43,14 @@ const (
 	statusDeleting = "Deleting"
 )
 
-// S3BucketInstanceController is responsible for adding the S3Bucket
+// BucketInstanceController is responsible for adding the S3Bucket
 // controller and its corresponding reconciler to the manager with any runtime configuration.
-type S3BucketInstanceController struct{}
+type BucketInstanceController struct{}
 
 // SetupWithManager instantiates a new controller using a resource.ManagedReconciler
 // configured to reconcile S3Buckets using an ExternalClient produced by
 // connecter, which satisfies the ExternalConnecter interface.
-func (r *S3BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
+func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(strings.ToLower(cloudscalev1alpha1.S3BucketKindAPIVersion)).
 		For(&cloudscalev1alpha1.S3Bucket{}).
@@ -166,7 +166,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 		ResourceExists:   exists,
 		ResourceUpToDate: true,
 		ConnectionDetails: resource.ConnectionDetails{
-			runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte("https://s3.cloudscale.ch"),
+			runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte("https://objects.cloudscale.ch"),
 			"access_key": []byte("0ZTAIBKSGYBRHQ09G11W"),
 			"secret_key": []byte("bn2ufcwbIa0ARLc5CLRSlVaCfFxPHOpHmjKiH34T"),
 		},

@@ -7,3 +7,12 @@ spec:
     name: test-credentials
     key: token
     namespace: crossplane-cloudscale
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-credentials
+  namespace: crossplane-cloudscale
+type: Opaque
+stringData:
+  token: someSecretToken

@@ -121,8 +121,11 @@ spec:
                   description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
                   type: string
               type: object
-            display_name:
-              description: DisplayName specifies the name of an S3 bucket
+            nameFormat:
+              description: NameFormat specifies the name of the external S3Bucket
+                instance. The first instance of the string '%s' will be replaced with
+                the Kubernetes UID of this S3Bucket. Omit this field to use the UID
+                alone as the name.
               type: string
             providerRef:
               description: ProviderReference specifies the provider that will be used

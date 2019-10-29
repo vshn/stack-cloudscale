@@ -21,9 +21,9 @@ import (
 
 	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
 	"git.vshn.net/syn/stack-cloudscale/controllers"
+	crossplaneapis "github.com/crossplaneio/crossplane/apis"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
@@ -36,7 +36,7 @@ var (
 
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
-
+	_ = crossplaneapis.AddToScheme(scheme)
 	_ = cloudscalev1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
@@ -62,11 +62,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.S3BucketInstanceController{}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "S3Bucket")
+	if err := controllers.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controllers")
 		os.Exit(1)
 	}
-	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

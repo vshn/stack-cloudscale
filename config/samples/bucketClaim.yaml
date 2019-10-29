@@ -1,0 +1,12 @@
+apiVersion: storage.crossplane.io/v1alpha1
+kind: Bucket
+metadata:
+  name: sample-bucket-claim
+spec:
+  classRef:
+    kind: S3BucketClass
+    apiVersion: cloudscale.syn.vshn.ch/v1alpha1
+    name: s3bucketclass-sample
+  writeConnectionSecretToRef:
+    name: cloudscale-sample-bucket-cred
+  name: cloudscale-sample-%s
