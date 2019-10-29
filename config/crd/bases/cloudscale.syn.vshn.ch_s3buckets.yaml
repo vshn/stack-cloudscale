@@ -211,6 +211,8 @@ spec:
               - Unbound
               - Bound
               type: string
+            bucketName:
+              type: string
             conditions:
               description: Conditions of the resource.
               items:
@@ -244,6 +246,8 @@ spec:
                 - type
                 type: object
               type: array
+            objectUserId:
+              type: string
             status:
               type: string
           type: object

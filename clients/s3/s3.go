@@ -18,58 +18,143 @@ package s3
 
 import (
 	"context"
+	"net/http"
 
-	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
+	"github.com/pkg/errors"
+
+	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk"
 )
+
+// BucketInfo shows info about a bucket and it's user
+type BucketInfo struct {
+	BucketName string
+	UserID     string
+	AccessKey  string
+	SecretKey  string
+	Tags       map[string]string
+	Endpoint   string
+}
 
 // IsErrorNotFound helper function to test for BucketNotFound error
 func IsErrorNotFound(err error) bool {
-	if err != nil && err.Error() == "Not found" {
-		return true
+	if errResp, ok := err.(*cloudscale.ErrorResponse); ok {
+		return errResp.StatusCode == 404
 	}
 	return false
 }
 
 // Service defines S3 Client operations
 type Service interface {
-	CreateOrUpdateBucket(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) error
-	GetBucketInfo(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) (*cloudscalev1alpha1.S3Bucket, error)
-	CreateUser(ctx context.Context, username string, bucket *cloudscalev1alpha1.S3Bucket) (string, string, error)
-	DeleteBucket(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) error
+	CreateOrUpdateBucket(ctx context.Context, bucket BucketInfo) (*BucketInfo, error)
+	GetBucketInfo(ctx context.Context, bucket BucketInfo) (*BucketInfo, error)
+	DeleteBucket(ctx context.Context, bucket BucketInfo) error
 }
 
 // Client implements S3 Client
 type Client struct {
-	credentials string
+	cloudscaleClient *cloudscale.Client
 }
 
 // NewClient creates a new S3 Client with provided Cloudscale credentials
-func NewClient(ctx context.Context, credentials string) Service {
-	return &Client{credentials: credentials}
+func NewClient(ctx context.Context, cloudscaleToken string, httpClient *http.Client) Service {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	c := &Client{
+		cloudscaleClient: cloudscale.NewClient(httpClient),
+	}
+	c.cloudscaleClient.AuthToken = cloudscaleToken
+
+	return c
 }
 
 // CreateOrUpdateBucket creates or updates the supplied S3 bucket with provided
-// specification, and returns access keys with permissions of localPermission
-func (c *Client) CreateOrUpdateBucket(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) error {
-	return nil
+// specification
+func (c *Client) CreateOrUpdateBucket(ctx context.Context, bucket BucketInfo) (*BucketInfo, error) {
+	objectUserRequest := &cloudscale.ObjectUserRequest{
+		DisplayName: bucket.BucketName,
+		Tags:        bucket.Tags,
+	}
+	existingUser, err := c.GetBucketInfo(ctx, bucket)
+	if IsErrorNotFound(err) {
+		objectUser, err := c.cloudscaleClient.ObjectUsers.Create(ctx, objectUserRequest)
+		if err != nil {
+			return nil, err
+		}
+		return toBucketInfo(objectUser)
+	} else if err != nil {
+		return nil, err
+	} else {
+		err := c.cloudscaleClient.ObjectUsers.Update(ctx, existingUser.UserID, objectUserRequest)
+		if err != nil {
+			return nil, err
+		}
+		return c.GetBucketInfo(ctx, bucket)
+	}
 }
 
 // GetBucketInfo returns the status of key bucket settings including user's policy version for permission status
-func (c *Client) GetBucketInfo(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) (*cloudscalev1alpha1.S3Bucket, error) {
-	existing := &cloudscalev1alpha1.S3Bucket{
-		Status: cloudscalev1alpha1.S3BucketStatus{
-			Status: "Online",
-		},
+func (c *Client) GetBucketInfo(ctx context.Context, bucket BucketInfo) (*BucketInfo, error) {
+	if bucket.UserID == "" {
+		return c.lookupUserByName(ctx, bucket.BucketName)
 	}
-	return existing, nil
-}
-
-// CreateUser - Create as user to access bucket per permissions in BucketSpec returing access key and policy version
-func (c *Client) CreateUser(ctx context.Context, username string, bucket *cloudscalev1alpha1.S3Bucket) (string, string, error) {
-	return "", "", nil
+	bucketUser, err := c.cloudscaleClient.ObjectUsers.Get(ctx, bucket.UserID)
+	if err != nil {
+		return nil, err
+	}
+	return toBucketInfo(bucketUser)
 }
 
 // DeleteBucket deletes s3 bucket, and related User
-func (c *Client) DeleteBucket(ctx context.Context, bucket *cloudscalev1alpha1.S3Bucket) error {
+func (c *Client) DeleteBucket(ctx context.Context, bucket BucketInfo) error {
+	err := c.cloudscaleClient.ObjectUsers.Delete(ctx, bucket.UserID)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (c *Client) lookupUserByName(ctx context.Context, userName string) (*BucketInfo, error) {
+	objectUsers, err := c.cloudscaleClient.ObjectUsers.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, user := range objectUsers {
+		if userName == user.DisplayName {
+			return toBucketInfo(&user)
+		}
+	}
+	err = &cloudscale.ErrorResponse{
+		StatusCode: 404,
+		Message: map[string]string{
+			"Error": "User not found",
+		},
+	}
+	return nil, err
+}
+
+func toBucketInfo(objectUser *cloudscale.ObjectUser) (*BucketInfo, error) {
+	err := errors.New("Unexpected keys found")
+	if len(objectUser.Keys) != 1 {
+		return nil, err
+	}
+	accessKey, ok := objectUser.Keys[0]["access_key"]
+	if !ok {
+		return nil, err
+	}
+	secretKey, ok := objectUser.Keys[0]["secret_key"]
+	if !ok {
+		return nil, err
+	}
+	bInfo := &BucketInfo{
+		UserID:     objectUser.ID,
+		Tags:       objectUser.Tags,
+		BucketName: objectUser.DisplayName,
+		AccessKey:  accessKey,
+		SecretKey:  secretKey,
+		Endpoint:   cloudscale.S3Endpoint,
+	}
+
+	return bInfo, nil
 }

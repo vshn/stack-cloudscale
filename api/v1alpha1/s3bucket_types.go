@@ -45,7 +45,9 @@ type S3BucketSpec struct {
 type S3BucketStatus struct {
 	runtimev1alpha1.ResourceStatus `json:",inline"`
 
-	Status string `json:"status,omitempty"`
+	Status       string `json:"status,omitempty"`
+	ObjectUserID string `json:"objectUserId,omitempty"`
+	BucketName   string `json:"bucketName,omitempty"`
 }
 
 // +kubebuilder:object:root=true

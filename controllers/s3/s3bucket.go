@@ -18,6 +18,7 @@ package s3
 
 import (
 	"context"
+	"net/http"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +32,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"git.vshn.net/syn/stack-cloudscale/clients/s3"
+	"github.com/crossplaneio/crossplane-runtime/pkg/logging"
 	"github.com/crossplaneio/crossplane-runtime/pkg/meta"
 	"github.com/crossplaneio/crossplane-runtime/pkg/resource"
 )
@@ -42,6 +44,8 @@ const (
 	statusCreating = "Creating"
 	statusDeleting = "Deleting"
 )
+
+var log = logging.Logger.WithName("s3bucket_controller")
 
 // BucketInstanceController is responsible for adding the S3Bucket
 // controller and its corresponding reconciler to the manager with any runtime configuration.
@@ -63,7 +67,7 @@ func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
 // Connecter satisfies the resource.ExternalConnecter interface.
 type connecter struct {
 	client      client.Client
-	newS3Client func(ctx context.Context, credentials string) s3.Service
+	newS3Client func(ctx context.Context, cloudscaleToken string, httpClient *http.Client) s3.Service
 }
 
 // Connect to the supplied resource.Managed (presumed to be a
@@ -94,82 +98,78 @@ func (c *connecter) Connect(ctx context.Context, mg resource.Managed) (resource.
 
 	// Create and return a new S3 client using the credentials read from
 	// our Provider's Secret.
-	client := c.newS3Client(ctx, string(s.Data[p.Spec.Secret.Key]))
+	client := c.newS3Client(ctx, string(s.Data[p.Spec.Secret.Key]), nil)
 	ext := &external{
-		s3Client:  client,
-		k8sClient: c.client,
+		s3Client: client,
 	}
 	return ext, nil
 }
 
 type external struct {
-	s3Client  s3.Service
-	k8sClient client.Client
+	s3Client s3.Service
+}
+
+func toBucketInfo(s3Bucket *cloudscalev1alpha1.S3Bucket) s3.BucketInfo {
+	return s3.BucketInfo{
+		BucketName: s3Bucket.GetBucketName(),
+		UserID:     s3Bucket.Status.ObjectUserID,
+		Tags:       s3Bucket.Spec.Tags,
+	}
+}
+
+func getConnectionDetails(bucketInfo *s3.BucketInfo) resource.ConnectionDetails {
+	return resource.ConnectionDetails{
+		runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(bucketInfo.AccessKey),
+		runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(bucketInfo.SecretKey),
+		runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(bucketInfo.Endpoint),
+	}
 }
 
 // Observe the existing external resource, if any. The resource.ManagedReconciler
 // calls Observe in order to determine whether an external resource needs to be
 // created, updated, or deleted.
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.ExternalObservation, error) {
-	i, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalObservation{}, errors.New(errNotInstance)
 	}
+	log.Info("Observe", "bucket", bucket.Name)
 
-	// Use our Cloudscale API client to get an up to date view of the external
-	// resource.
-	_, err := e.s3Client.GetBucketInfo(ctx, i)
+	bucketInfo, err := e.s3Client.GetBucketInfo(ctx, toBucketInfo(bucket))
 
 	// If we encounter an error indicating the external resource does not exist
 	// we want to let the resource.ManagedReconciler know so it can create it.
 	if s3.IsErrorNotFound(err) {
 		return resource.ExternalObservation{ResourceExists: false}, nil
-	}
-
-	// Any other errors are wrapped (as is good Go practice) and returned to the
-	// resource.ManagedReconciler. It will update the "Synced" status condition
-	// of the managed resource to reflect that the most recent reconcile failed
-	// and ensure the reconcile is reattempted after a brief wait.
-	if err != nil {
+	} else if err != nil {
 		return resource.ExternalObservation{}, errors.Wrap(err, "cannot get instance")
 	}
-
-	// The external resource exists. Copy any output-only fields to their
-	// corresponding entries in our status field.
-	//i.Status.Status = existing.Status.Status
-	exists := true
 
 	// Update our "Ready" status condition to reflect the status of the external
 	// resource. Most managed resources use the below well known reasons that
 	// the "Ready" status may be true or false, but managed resource authors
 	// are welcome to define and use their own.
-	switch i.Status.Status {
+	switch bucket.Status.Status {
 	case statusOnline:
 		// If the resource is available we also want to mark it as bindable to
 		// resource claims.
-		i.SetConditions(runtimev1alpha1.Available())
-		resource.SetBindable(i)
+		bucket.SetConditions(runtimev1alpha1.Available())
+		resource.SetBindable(bucket)
 	case statusCreating:
-		i.SetConditions(runtimev1alpha1.Creating())
-		i.Status.Status = statusOnline
+		bucket.SetConditions(runtimev1alpha1.Creating())
 	case statusDeleting:
-		i.SetConditions(runtimev1alpha1.Deleting())
-		exists = false
+		bucket.SetConditions(runtimev1alpha1.Deleting())
 	default:
-		i.Status.Status = statusCreating
+		bucket.Status.Status = statusCreating
 	}
 
 	// Finally, we report what we know about the external resource. Any
 	// ConnectionDetails we return will be published to the managed resource's
 	// connection secret if it specified one.
 	o := resource.ExternalObservation{
-		ResourceExists:   exists,
-		ResourceUpToDate: true,
-		ConnectionDetails: resource.ConnectionDetails{
-			runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte("https://objects.cloudscale.ch"),
-			"access_key": []byte("0ZTAIBKSGYBRHQ09G11W"),
-			"secret_key": []byte("bn2ufcwbIa0ARLc5CLRSlVaCfFxPHOpHmjKiH34T"),
-		},
+		ResourceExists:    true,
+		ResourceUpToDate:  true,
+		ConnectionDetails: getConnectionDetails(bucketInfo),
 	}
 
 	return o, nil
@@ -179,58 +179,54 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 // resource. resource.ManagedReconciler only calls Create if Observe reported
 // that the external resource did not exist.
 func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.ExternalCreation, error) {
-	i, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalCreation{}, errors.New(errNotInstance)
 	}
+	log.Info("Create", "bucket", bucket.Name)
 
-	// Create must return any connection details that are set or returned only
-	// at creation time. The resource.ManagedReconciler will merge any details
-	// with those returned during the Observe phase.
-	cd := resource.ConnectionDetails{"secret_key": []byte("bn2ufcwbIa0ARLc5CLRSlVaCfFxPHOpHmjKiH34T")}
-
-	// Create a new instance.
-	err := e.s3Client.CreateOrUpdateBucket(ctx, i)
+	bucketInfo, err := e.s3Client.CreateOrUpdateBucket(ctx, toBucketInfo(bucket))
 	if err != nil {
 		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
 	}
 
-	i.Status.Status = statusCreating
+	bucket.Status.ObjectUserID = bucketInfo.UserID
+	bucket.Status.BucketName = bucketInfo.BucketName
+	bucket.Status.Status = statusOnline
 
-	return resource.ExternalCreation{ConnectionDetails: cd}, nil
+	return resource.ExternalCreation{ConnectionDetails: getConnectionDetails(bucketInfo)}, nil
 }
 
 // Update the existing external resource to match the specifications of our
 // managed resource. resource.ManagedReconciler only calls Update if Observe
 // reported that the external resource was not up to date.
 func (e *external) Update(ctx context.Context, mg resource.Managed) (resource.ExternalUpdate, error) {
-	i, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalUpdate{}, errors.New(errNotInstance)
 	}
-	err := e.s3Client.CreateOrUpdateBucket(ctx, i)
+	log.Info("Update", "bucket", bucket.Name)
+	bucketInfo, err := e.s3Client.CreateOrUpdateBucket(ctx, toBucketInfo(bucket))
+	bucket.Status.ObjectUserID = bucketInfo.UserID
+	bucket.Status.BucketName = bucketInfo.BucketName
 	return resource.ExternalUpdate{}, errors.Wrap(err, "cannot update instance")
 }
 
 // Delete the external resource. resource.ManagedReconciler only calls Delete
 // when a managed resource with the 'Delete' reclaim policy has been deleted.
 func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
-	i, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
 	if !ok {
 		return errors.New(errNotInstance)
 	}
+	log.Info("Delete", "bucket", bucket.Name)
 	// Indicate that we're about to delete the instance.
-	i.Status.Status = statusDeleting
-	i.SetConditions(runtimev1alpha1.Deleting())
+	bucket.Status.Status = statusDeleting
 
 	// Delete the instance.
-	err := e.s3Client.DeleteBucket(ctx, i)
-	if err != nil {
+	err := e.s3Client.DeleteBucket(ctx, toBucketInfo(bucket))
+	if err != nil && !s3.IsErrorNotFound(err) {
 		return errors.Wrap(err, "cannot delete instance")
 	}
-
-	// meta.RemoveFinalizer(i, "finalizer.managedresource.crossplane.io")
-	// err = e.k8sClient.Update(ctx, i)
-
 	return nil
 }
