@@ -18,13 +18,16 @@ COPY controllers/ controllers/
 COPY main.go ./
 
 # Build
-RUN --mount=type=cache,target=/root/.cache/go-build go build -v -a -o manager main.go
+RUN --mount=type=cache,target=/root/.cache/ \
+    go build -v \
+        -o bin/manager \
+        main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM docker.io/alpine:3.10
-COPY --from=builder /workspace/manager /manager
+COPY --from=builder /workspace/bin/manager /bin/manager
 COPY stack-package .
 
 
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/bin/manager"]
