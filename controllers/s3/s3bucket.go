@@ -18,6 +18,7 @@ package s3
 
 import (
 	"context"
+	"github.com/cloudscale-ch/cloudscale-go-sdk"
 	"net/http"
 	"strings"
 
@@ -109,22 +110,6 @@ type external struct {
 	s3Client s3.Service
 }
 
-func toBucketInfo(s3Bucket *cloudscalev1alpha1.S3Bucket) s3.BucketInfo {
-	return s3.BucketInfo{
-		BucketName: s3Bucket.GetBucketName(),
-		UserID:     s3Bucket.Status.ObjectUserID,
-		Tags:       s3Bucket.Spec.Tags,
-	}
-}
-
-func getConnectionDetails(bucketInfo *s3.BucketInfo) resource.ConnectionDetails {
-	return resource.ConnectionDetails{
-		runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(bucketInfo.AccessKey),
-		runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(bucketInfo.SecretKey),
-		runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(bucketInfo.Endpoint),
-	}
-}
-
 // Observe the existing external resource, if any. The resource.ManagedReconciler
 // calls Observe in order to determine whether an external resource needs to be
 // created, updated, or deleted.
@@ -135,7 +120,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	}
 	log.Info("Observe", "bucket", bucket.Name)
 
-	bucketInfo, err := e.s3Client.GetBucketInfo(ctx, toBucketInfo(bucket))
+	bucketUser, err := e.s3Client.GetBucketInfo(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName())
 
 	// If we encounter an error indicating the external resource does not exist
 	// we want to let the resource.ManagedReconciler know so it can create it.
@@ -163,13 +148,22 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 		bucket.Status.Status = statusCreating
 	}
 
+	accessKey, secretKey, err := s3.GetKeys(bucketUser)
+	if err != nil {
+		return resource.ExternalObservation{}, err
+	}
+
 	// Finally, we report what we know about the external resource. Any
 	// ConnectionDetails we return will be published to the managed resource's
 	// connection secret if it specified one.
 	o := resource.ExternalObservation{
-		ResourceExists:    true,
-		ResourceUpToDate:  true,
-		ConnectionDetails: getConnectionDetails(bucketInfo),
+		ResourceExists:   true,
+		ResourceUpToDate: true,
+		ConnectionDetails: resource.ConnectionDetails{
+			runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(accessKey),
+			runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(secretKey),
+			runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(cloudscale.S3Endpoint),
+		},
 	}
 
 	return o, nil
@@ -185,16 +179,26 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 	}
 	log.Info("Create", "bucket", bucket.Name)
 
-	bucketInfo, err := e.s3Client.CreateOrUpdateBucket(ctx, toBucketInfo(bucket))
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName(), bucket.Spec.Tags)
 	if err != nil {
 		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
 	}
 
-	bucket.Status.ObjectUserID = bucketInfo.UserID
-	bucket.Status.BucketName = bucketInfo.BucketName
+	bucket.Status.ObjectUserID = objectUser.ID
+	bucket.Status.BucketName = objectUser.DisplayName
 	bucket.Status.Status = statusOnline
 
-	return resource.ExternalCreation{ConnectionDetails: getConnectionDetails(bucketInfo)}, nil
+	accessKey, secretKey, err := s3.GetKeys(objectUser)
+	if err != nil {
+		return resource.ExternalCreation{}, err
+	}
+	cn := resource.ConnectionDetails{
+		runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(accessKey),
+		runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(secretKey),
+		runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(cloudscale.S3Endpoint),
+	}
+
+	return resource.ExternalCreation{ConnectionDetails: cn}, nil
 }
 
 // Update the existing external resource to match the specifications of our
@@ -206,9 +210,9 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (resource.Ex
 		return resource.ExternalUpdate{}, errors.New(errNotInstance)
 	}
 	log.Info("Update", "bucket", bucket.Name)
-	bucketInfo, err := e.s3Client.CreateOrUpdateBucket(ctx, toBucketInfo(bucket))
-	bucket.Status.ObjectUserID = bucketInfo.UserID
-	bucket.Status.BucketName = bucketInfo.BucketName
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName(), bucket.Spec.Tags)
+	bucket.Status.ObjectUserID = objectUser.ID
+	bucket.Status.BucketName = objectUser.DisplayName
 	return resource.ExternalUpdate{}, errors.Wrap(err, "cannot update instance")
 }
 
@@ -224,7 +228,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 	bucket.Status.Status = statusDeleting
 
 	// Delete the instance.
-	err := e.s3Client.DeleteBucket(ctx, toBucketInfo(bucket))
+	err := e.s3Client.DeleteBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName())
 	if err != nil && !s3.IsErrorNotFound(err) {
 		return errors.Wrap(err, "cannot delete instance")
 	}

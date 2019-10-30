@@ -3,6 +3,7 @@ module git.vshn.net/syn/stack-cloudscale
 go 1.13
 
 require (
+	github.com/aws/aws-sdk-go v1.25.23
 	github.com/cloudscale-ch/cloudscale-go-sdk v0.0.0-20191015091802-894d6d497c88
 	github.com/crossplaneio/crossplane v0.3.1-0.20191026093543-dfa760ae9cd2
 	github.com/crossplaneio/crossplane-runtime v0.1.0
