@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "syn-stack-cloudscale"
+  name: "stack-cloudscale"
   labels:
-    core.crossplane.io/name: "syn-stack-cloudscale"
+    core.crossplane.io/name: "stack-cloudscale"
 spec:
   selector:
     matchLabels:
-      core.crossplane.io/name: "syn-stack-cloudscale"
+      core.crossplane.io/name: "stack-cloudscale"
   replicas: 1
   template:
     metadata:
-      name: "syn-stack-cloudscale-controller"
+      name: "stack-cloudscale-controller"
       labels:
-        core.crossplane.io/name: "syn-stack-cloudscale"
+        core.crossplane.io/name: "stack-cloudscale"
     spec:
       containers:
-      - name: "syn-stack-cloudscale-controller"
-        image: "registry.vshn.net/simon.ruegg/syn/stack-cloudscale"
+      - name: "stack-cloudscale-controller"
+        image: docker.io/vshn/stack-cloudscale
         env:
         - name: POD_NAME
           valueFrom:

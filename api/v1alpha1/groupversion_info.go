@@ -24,7 +24,7 @@ import (
 
 const (
 	// Group is the group of the objects
-	Group = "cloudscale.syn.vshn.ch"
+	Group = "cloudscale.crossplane.io"
 
 	// Version is the version of the objects
 	Version = "v1alpha1"

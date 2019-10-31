@@ -4,9 +4,9 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  name: providers.cloudscale.syn.vshn.ch
+  name: providers.cloudscale.crossplane.io
 spec:
-  group: cloudscale.syn.vshn.ch
+  group: cloudscale.crossplane.io
   names:
     kind: Provider
     listKind: ProviderList

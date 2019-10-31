@@ -28,14 +28,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
 	runtimev1alpha1 "github.com/crossplaneio/crossplane-runtime/apis/core/v1alpha1"
+	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 
-	"git.vshn.net/syn/stack-cloudscale/clients/s3"
 	"github.com/crossplaneio/crossplane-runtime/pkg/logging"
 	"github.com/crossplaneio/crossplane-runtime/pkg/meta"
 	"github.com/crossplaneio/crossplane-runtime/pkg/resource"
+	"github.com/vshn/stack-cloudscale/clients/s3"
 )
 
 const (

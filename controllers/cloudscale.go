@@ -19,7 +19,7 @@ package controllers
 import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"git.vshn.net/syn/stack-cloudscale/controllers/s3"
+	"github.com/vshn/stack-cloudscale/controllers/s3"
 )
 
 // SetupWithManager adds all Cloudscale controllers to the manager.

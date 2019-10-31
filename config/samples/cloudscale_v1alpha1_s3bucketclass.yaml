@@ -1,4 +1,4 @@
-apiVersion: cloudscale.syn.vshn.ch/v1alpha1
+apiVersion: cloudscale.crossplane.io/v1alpha1
 kind: S3BucketClass
 metadata:
   name: s3bucketclass-sample

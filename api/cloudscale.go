@@ -24,7 +24,7 @@ limitations under the License.
 package api
 
 import (
-	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
+	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 

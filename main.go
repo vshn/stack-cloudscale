@@ -19,9 +19,9 @@ import (
 	"flag"
 	"os"
 
-	cloudscalev1alpha1 "git.vshn.net/syn/stack-cloudscale/api/v1alpha1"
-	"git.vshn.net/syn/stack-cloudscale/controllers"
 	crossplaneapis "github.com/crossplaneio/crossplane/apis"
+	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
+	"github.com/vshn/stack-cloudscale/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"

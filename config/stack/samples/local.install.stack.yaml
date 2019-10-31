@@ -2,7 +2,7 @@
 apiVersion: stacks.crossplane.io/v1alpha1
 kind: StackInstall
 metadata:
-  name: "syn-stack-cloudscale"
+  name: "stack-cloudscale"
 spec:
-  source: git.vshn.net
-  package: "simon.ruegg/syn/stack-cloudscale"
+  source: docker.io/vshn/
+  package: stack-cloudscale

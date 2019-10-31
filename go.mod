@@ -1,4 +1,4 @@
-module git.vshn.net/syn/stack-cloudscale
+module github.com/vshn/stack-cloudscale
 
 go 1.13
 

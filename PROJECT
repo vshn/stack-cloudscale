@@ -1,6 +1,6 @@
 version: "2"
-domain: syn.vshn.ch
-repo: git.vshn.net/syn/stack-cloudscale
+domain: cloudscale.crossplane.io
+repo: github.com/vshn/stack-cloudscale
 resources:
 - group: cloudscale
   version: v1alpha1

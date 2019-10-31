@@ -2,5 +2,5 @@ spec:
   template:
     spec:
       containers:
-      - name: "syn-stack-cloudscale-controller"
-        image: "git.vshn.net/simon.ruegg/syn/stack-cloudscale"
+      - name: "stack-cloudscale-controller"
+        image: "docker.io/vshn/stack-cloudscale"
