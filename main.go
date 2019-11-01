@@ -16,11 +16,11 @@ limitations under the License.
 package main
 
 import (
+	"github.com/vshn/stack-cloudscale/api"
 	"flag"
 	"os"
 
 	crossplaneapis "github.com/crossplaneio/crossplane/apis"
-	storagev1alpha1 "github.com/vshn/stack-cloudscale/api/storage/v1alpha1"
 	"github.com/vshn/stack-cloudscale/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -33,13 +33,6 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
-
-func init() {
-	_ = clientgoscheme.AddToScheme(scheme)
-	_ = crossplaneapis.AddToScheme(scheme)
-	_ = storagev1alpha1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
-}
 
 func main() {
 	var metricsAddr string
@@ -62,6 +55,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// add all resources to the manager's runtime scheme
+	if err := addToScheme(mgr.GetScheme()); err != nil {
+		setupLog.Error(err, "unable to add schemes")
+		os.Exit(1)
+	}
+
 	if err := controllers.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		os.Exit(1)
@@ -72,4 +71,21 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// addToScheme adds all resources to the runtime scheme.
+func addToScheme(scheme *runtime.Scheme) error {
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return err
+	}
+
+	if err := api.AddToScheme(scheme); err != nil {
+		return err
+	}
+
+	if err := crossplaneapis.AddToScheme(scheme); err != nil {
+		return err
+	}
+
+	return nil
 }

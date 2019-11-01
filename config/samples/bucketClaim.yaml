@@ -5,7 +5,7 @@ metadata:
 spec:
   classRef:
     kind: S3BucketClass
-    apiVersion: cloudscale.crossplane.io/v1alpha1
+    apiVersion: storage.cloudscale.crossplane.io/v1alpha1
     name: s3bucketclass-sample
   writeConnectionSecretToRef:
     name: cloudscale-sample-bucket-cred

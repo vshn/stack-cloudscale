@@ -49,7 +49,7 @@ func (c *BucketClaimSchedulingController) SetupWithManager(mgr ctrl.Manager) err
 	name := strings.ToLower(fmt.Sprintf("scheduler.%s.%s.%s",
 		storagev1alpha1.BucketKind,
 		cloudscaleStoragev1alpha1.S3BucketKind,
-		storagev1alpha1.Group))
+		cloudscaleStoragev1alpha1.Group))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
@@ -76,7 +76,7 @@ func (c *BucketClaimDefaultingController) SetupWithManager(mgr ctrl.Manager) err
 	name := strings.ToLower(fmt.Sprintf("defaulter.%s.%s.%s",
 		storagev1alpha1.BucketKind,
 		cloudscaleStoragev1alpha1.S3BucketKind,
-		storagev1alpha1.Group))
+		cloudscaleStoragev1alpha1.Group))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
@@ -101,7 +101,7 @@ func (c *BucketClaimController) SetupWithManager(mgr ctrl.Manager) error {
 	name := strings.ToLower(fmt.Sprintf("%s.%s.%s",
 		storagev1alpha1.BucketKind,
 		cloudscaleStoragev1alpha1.S3BucketKind,
-		storagev1alpha1.Group))
+		cloudscaleStoragev1alpha1.Group))
 
 	p := resource.NewPredicates(resource.AnyOf(
 		resource.HasClassReferenceKind(resource.ClassKind(cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind)),
