@@ -4,4 +4,5 @@ kind: StackInstall
 metadata:
   name: "stack-cloudscale"
 spec:
-  package: docker.io/vshn/stack-cloudscale
+  source: docker.io/vshn/
+  package: stack-cloudscale:v0.0.1

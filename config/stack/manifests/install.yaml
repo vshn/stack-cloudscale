@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: "stack-cloudscale-controller"
-        image: docker.io/vshn/stack-cloudscale
+        image: docker.io/vshn/stack-cloudscale:v0.0.1
         env:
         - name: POD_NAME
           valueFrom:
