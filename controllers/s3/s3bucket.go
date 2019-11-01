@@ -65,7 +65,8 @@ func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Complete(resource.NewManagedReconciler(mgr,
 			resource.ManagedKind(storagev1alpha1.S3BucketGroupVersionKind),
-			resource.WithExternalConnecter(&connecter{client: mgr.GetClient(), newS3Client: s3.NewClient})))
+			resource.WithExternalConnecter(&connecter{client: mgr.GetClient(), newS3Client: s3.NewClient}),
+			resource.WithManagedInitializers(resource.NewAPIManagedFinalizerAdder(mgr.GetClient()))))
 }
 
 // Connecter satisfies the resource.ExternalConnecter interface.
@@ -158,7 +159,6 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 		return resource.ExternalObservation{}, err
 	}
 	bucket.Status.AtProvider.ObjectUserID = bucketUser.ID
-	bucket.Status.AtProvider.BucketName = bucketUser.DisplayName
 	bucket.Status.AtProvider.Status = statusOnline
 
 	// Finally, we report what we know about the external resource. Any
@@ -193,7 +193,6 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 	}
 
 	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
-	bucket.Status.AtProvider.BucketName = objectUser.DisplayName
 	bucket.Status.AtProvider.Status = statusOnline
 
 	accessKey, secretKey, err := s3.GetKeys(objectUser)
@@ -220,7 +219,6 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (resource.Ex
 	log.Info("Update", "bucket", bucket.Name)
 	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
-	bucket.Status.AtProvider.BucketName = objectUser.DisplayName
 	return resource.ExternalUpdate{}, errors.Wrap(err, "cannot update instance")
 }
 
@@ -261,7 +259,7 @@ func getBucketName(bucket *storagev1alpha1.S3Bucket) string {
 	bucketName := meta.GetExternalName(bucket)
 	if bucketName == "" {
 		bucketName = util.ConditionalStringFormat(util.StringValue(bucket.Spec.ForProvider.NameFormat), string(bucket.GetUID()))
-		meta.SetExternalName(bucket, "asdf")
+		meta.SetExternalName(bucket, bucketName)
 	}
 	return bucketName
 }

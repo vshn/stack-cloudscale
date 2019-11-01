@@ -219,8 +219,6 @@ spec:
               description: S3BucketObservation is the representation of the current
                 state that is observed.
               properties:
-                bucketName:
-                  type: string
                 objectUserId:
                   type: string
                 status:

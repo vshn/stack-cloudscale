@@ -50,7 +50,6 @@ type S3BucketSpec struct {
 type S3BucketObservation struct {
 	Status       string `json:"status,omitempty"`
 	ObjectUserID string `json:"objectUserId,omitempty"`
-	BucketName   string `json:"bucketName,omitempty"`
 }
 
 // S3BucketStatus defines the observed state of S3Bucket
