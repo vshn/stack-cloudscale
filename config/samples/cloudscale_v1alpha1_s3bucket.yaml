@@ -1,11 +1,13 @@
-apiVersion: cloudscale.crossplane.io/v1alpha1
+apiVersion: storage.cloudscale.crossplane.io/v1alpha1
 kind: S3Bucket
 metadata:
   name: s3bucket-sample
 spec:
-  display_name: testBucket
-  tags:
-    test: one
+  forProvider:
+    nameFormat: testBucket
+    cannedACL: private
+    tags:
+      test: one
   writeConnectionSecretToRef:
     name: s3sample-cred
     namespace: crossplane-cloudscale

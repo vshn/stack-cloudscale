@@ -10,3 +10,4 @@ spec:
   writeConnectionSecretToRef:
     name: cloudscale-sample-bucket-cred
   name: cloudscale-sample-%s
+  predefinedACL: Private

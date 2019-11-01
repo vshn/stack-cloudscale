@@ -5,4 +5,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     certmanager.k8s.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: s3bucketclasses.cloudscale.crossplane.io
+  name: s3bucketclasses.storage.cloudscale.crossplane.io

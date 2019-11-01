@@ -24,14 +24,16 @@ limitations under the License.
 package api
 
 import (
-	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
+	storagev1alpha1 "github.com/vshn/stack-cloudscale/api/storage/v1alpha1"
+	v1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes,
-		cloudscalev1alpha1.SchemeBuilder.AddToScheme,
+		storagev1alpha1.SchemeBuilder.AddToScheme,
+		v1alpha1.SchemeBuilder.AddToScheme,
 	)
 }
 

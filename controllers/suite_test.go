@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
+	storagev1alpha1 "github.com/vshn/stack-cloudscale/api/storage/v1alpha1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,10 +61,10 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = cloudscalev1alpha1.AddToScheme(scheme.Scheme)
+	err = storagev1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = cloudscalev1alpha1.AddToScheme(scheme.Scheme)
+	err = storagev1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

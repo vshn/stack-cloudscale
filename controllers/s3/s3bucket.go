@@ -18,9 +18,10 @@ package s3
 
 import (
 	"context"
-	"github.com/cloudscale-ch/cloudscale-go-sdk"
 	"net/http"
 	"strings"
+
+	"github.com/cloudscale-ch/cloudscale-go-sdk"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -29,12 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	runtimev1alpha1 "github.com/crossplaneio/crossplane-runtime/apis/core/v1alpha1"
+	storagev1alpha1 "github.com/vshn/stack-cloudscale/api/storage/v1alpha1"
 	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/crossplaneio/crossplane-runtime/pkg/logging"
 	"github.com/crossplaneio/crossplane-runtime/pkg/meta"
 	"github.com/crossplaneio/crossplane-runtime/pkg/resource"
+	"github.com/crossplaneio/crossplane-runtime/pkg/util"
 	"github.com/vshn/stack-cloudscale/clients/s3"
 )
 
@@ -57,11 +60,11 @@ type BucketInstanceController struct{}
 // connecter, which satisfies the ExternalConnecter interface.
 func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		Named(strings.ToLower(cloudscalev1alpha1.S3BucketKindAPIVersion)).
-		For(&cloudscalev1alpha1.S3Bucket{}).
+		Named(strings.ToLower(storagev1alpha1.S3BucketKindAPIVersion)).
+		For(&storagev1alpha1.S3Bucket{}).
 		Owns(&corev1.Secret{}).
 		Complete(resource.NewManagedReconciler(mgr,
-			resource.ManagedKind(cloudscalev1alpha1.S3BucketGroupVersionKind),
+			resource.ManagedKind(storagev1alpha1.S3BucketGroupVersionKind),
 			resource.WithExternalConnecter(&connecter{client: mgr.GetClient(), newS3Client: s3.NewClient})))
 }
 
@@ -79,7 +82,7 @@ func (c *connecter) Connect(ctx context.Context, mg resource.Managed) (resource.
 	// S3Bucket. We told NewControllerManagedBy that this was a
 	// controller For S3Bucket, so something would have to go
 	// horribly wrong for us to encounter another type.
-	i, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	i, ok := mg.(*storagev1alpha1.S3Bucket)
 	if !ok {
 		return nil, errors.New(errNotInstance)
 	}
@@ -114,13 +117,15 @@ type external struct {
 // calls Observe in order to determine whether an external resource needs to be
 // created, updated, or deleted.
 func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.ExternalObservation, error) {
-	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*storagev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalObservation{}, errors.New(errNotInstance)
 	}
 	log.Info("Observe", "bucket", bucket.Name)
 
-	bucketUser, err := e.s3Client.GetBucketInfo(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName())
+	bucketName := getBucketName(bucket)
+
+	bucketUser, err := e.s3Client.GetBucketInfo(ctx, bucket.Status.AtProvider.ObjectUserID, bucketName)
 
 	// If we encounter an error indicating the external resource does not exist
 	// we want to let the resource.ManagedReconciler know so it can create it.
@@ -134,7 +139,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	// resource. Most managed resources use the below well known reasons that
 	// the "Ready" status may be true or false, but managed resource authors
 	// are welcome to define and use their own.
-	switch bucket.Status.Status {
+	switch bucket.Status.AtProvider.Status {
 	case statusOnline:
 		// If the resource is available we also want to mark it as bindable to
 		// resource claims.
@@ -145,7 +150,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	case statusDeleting:
 		bucket.SetConditions(runtimev1alpha1.Deleting())
 	default:
-		bucket.Status.Status = statusCreating
+		bucket.Status.AtProvider.Status = statusCreating
 	}
 
 	accessKey, secretKey, err := s3.GetKeys(bucketUser)
@@ -173,20 +178,20 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 // resource. resource.ManagedReconciler only calls Create if Observe reported
 // that the external resource did not exist.
 func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.ExternalCreation, error) {
-	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*storagev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalCreation{}, errors.New(errNotInstance)
 	}
 	log.Info("Create", "bucket", bucket.Name)
 
-	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName(), bucket.Spec.Tags)
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	if err != nil {
 		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
 	}
 
-	bucket.Status.ObjectUserID = objectUser.ID
-	bucket.Status.BucketName = objectUser.DisplayName
-	bucket.Status.Status = statusOnline
+	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
+	bucket.Status.AtProvider.BucketName = objectUser.DisplayName
+	bucket.Status.AtProvider.Status = statusOnline
 
 	accessKey, secretKey, err := s3.GetKeys(objectUser)
 	if err != nil {
@@ -205,32 +210,55 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 // managed resource. resource.ManagedReconciler only calls Update if Observe
 // reported that the external resource was not up to date.
 func (e *external) Update(ctx context.Context, mg resource.Managed) (resource.ExternalUpdate, error) {
-	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*storagev1alpha1.S3Bucket)
 	if !ok {
 		return resource.ExternalUpdate{}, errors.New(errNotInstance)
 	}
 	log.Info("Update", "bucket", bucket.Name)
-	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName(), bucket.Spec.Tags)
-	bucket.Status.ObjectUserID = objectUser.ID
-	bucket.Status.BucketName = objectUser.DisplayName
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
+	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
+	bucket.Status.AtProvider.BucketName = objectUser.DisplayName
 	return resource.ExternalUpdate{}, errors.Wrap(err, "cannot update instance")
 }
 
 // Delete the external resource. resource.ManagedReconciler only calls Delete
 // when a managed resource with the 'Delete' reclaim policy has been deleted.
 func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
-	bucket, ok := mg.(*cloudscalev1alpha1.S3Bucket)
+	bucket, ok := mg.(*storagev1alpha1.S3Bucket)
 	if !ok {
 		return errors.New(errNotInstance)
 	}
 	log.Info("Delete", "bucket", bucket.Name)
 	// Indicate that we're about to delete the instance.
-	bucket.Status.Status = statusDeleting
+	bucket.Status.AtProvider.Status = statusDeleting
 
 	// Delete the instance.
-	err := e.s3Client.DeleteBucket(ctx, bucket.Status.ObjectUserID, bucket.GetBucketName())
+	err := e.s3Client.DeleteBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket))
 	if err != nil && !s3.IsErrorNotFound(err) {
 		return errors.Wrap(err, "cannot delete instance")
 	}
 	return nil
+}
+
+// Generate bucket name based on the NameFormat spec value,
+// If name format is not provided, bucket name defaults to UID
+// If name format provided with '%s' value, bucket name will result in formatted string + UID,
+//   NOTE: only single %s substitution is supported
+// If name format does not contain '%s' substitution, i.e. a constant string, the
+// constant string value is returned back
+//
+// Examples:
+//   For all examples assume "UID" = "test-uid"
+//   1. NameFormat = "", BucketName = "test-uid"
+//   2. NameFormat = "%s", BucketName = "test-uid"
+//   3. NameFormat = "foo", BucketName = "foo"
+//   4. NameFormat = "foo-%s", BucketName = "foo-test-uid"
+//   5. NameFormat = "foo-%s-bar-%s", BucketName = "foo-test-uid-bar-%!s(MISSING)"
+func getBucketName(bucket *storagev1alpha1.S3Bucket) string {
+	bucketName := meta.GetExternalName(bucket)
+	if bucketName == "" {
+		bucketName = util.ConditionalStringFormat(util.StringValue(bucket.Spec.ForProvider.NameFormat), string(bucket.GetUID()))
+		meta.SetExternalName(bucket, "asdf")
+	}
+	return bucketName
 }

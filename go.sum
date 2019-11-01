@@ -19,6 +19,7 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/cenkalti/backoff v2.1.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/crossplaneio/crossplane v0.3.1-0.20191026093543-dfa760ae9cd2 h1:R3MROLMp/mGBUDdcUqpitFJI7aIB7/2myHuVSVhsgFo=
 github.com/crossplaneio/crossplane v0.3.1-0.20191026093543-dfa760ae9cd2/go.mod h1:r/iuuYYKmZ2cTE5DbIfMDQ9GF6xN2PrNXjnxGJUXTMI=
+github.com/crossplaneio/crossplane v0.4.0 h1:YbRZX21XhMbwUnzkrNCjrXmGgNC8HMZK17AwfX4/4JA=
 github.com/crossplaneio/crossplane-runtime v0.0.0-20191023215652-0f37bea5496e/go.mod h1:FMlJ6k7pUZdxQrjh0B33D2b79iBac+xcMEHTWiruXao=
 github.com/crossplaneio/crossplane-runtime v0.1.0 h1:IoPxURwynfUaqOZ/oQ8aLTQq89ueOckm73nbuVZthow=
 github.com/crossplaneio/crossplane-runtime v0.1.0/go.mod h1:FMlJ6k7pUZdxQrjh0B33D2b79iBac+xcMEHTWiruXao=
@@ -266,6 +267,7 @@ k8s.io/apiextensions-apiserver v0.0.0-20190409022649-727a075fdec8 h1:q1Qvjzs/iEd
 k8s.io/apiextensions-apiserver v0.0.0-20190409022649-727a075fdec8/go.mod h1:IxkesAMoaCRoLrPJdZNZUQp9NfZnzqaVzLhb2VEQzXE=
 k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d h1:Jmdtdt1ZnoGfWWIIik61Z7nKYgO3J+swQJtPYsP9wHA=
 k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
+k8s.io/apimachinery v0.0.0-20191030190112-bb31b70367b7 h1:81UYA9Qq3JXPpZMmRBnq6T3qU+b71Dvnm6sV3NSQTVk=
 k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible h1:U5Bt+dab9K8qaUmXINrkXO135kA11/i5Kg1RUydgaMQ=
 k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
 k8s.io/gengo v0.0.0-20190128074634-0689ccc1d7d6/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=

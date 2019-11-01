@@ -28,8 +28,15 @@ import (
 	runtimev1alpha1 "github.com/crossplaneio/crossplane-runtime/apis/core/v1alpha1"
 	"github.com/crossplaneio/crossplane-runtime/pkg/resource"
 	storagev1alpha1 "github.com/crossplaneio/crossplane/apis/storage/v1alpha1"
-	cloudscalev1alpha1 "github.com/vshn/stack-cloudscale/api/v1alpha1"
+	cloudscaleStoragev1alpha1 "github.com/vshn/stack-cloudscale/api/storage/v1alpha1"
 )
+
+var s3ACL = map[storagev1alpha1.PredefinedACL]string{
+	storagev1alpha1.ACLPrivate:           "private",
+	storagev1alpha1.ACLPublicRead:        "public-read",
+	storagev1alpha1.ACLPublicReadWrite:   "public-read-write",
+	storagev1alpha1.ACLAuthenticatedRead: "authenticated-read",
+}
 
 // A BucketClaimSchedulingController reconciles Bucket claims that include a
 // class selector but omit their class and resource references by picking a
@@ -41,8 +48,8 @@ type BucketClaimSchedulingController struct{}
 func (c *BucketClaimSchedulingController) SetupWithManager(mgr ctrl.Manager) error {
 	name := strings.ToLower(fmt.Sprintf("scheduler.%s.%s.%s",
 		storagev1alpha1.BucketKind,
-		cloudscalev1alpha1.S3BucketKind,
-		cloudscalev1alpha1.Group))
+		cloudscaleStoragev1alpha1.S3BucketKind,
+		storagev1alpha1.Group))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
@@ -54,7 +61,7 @@ func (c *BucketClaimSchedulingController) SetupWithManager(mgr ctrl.Manager) err
 		))).
 		Complete(resource.NewClaimSchedulingReconciler(mgr,
 			resource.ClaimKind(storagev1alpha1.BucketGroupVersionKind),
-			resource.ClassKind(cloudscalev1alpha1.S3BucketClassGroupVersionKind),
+			resource.ClassKind(cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind),
 		))
 }
 
@@ -68,8 +75,8 @@ type BucketClaimDefaultingController struct{}
 func (c *BucketClaimDefaultingController) SetupWithManager(mgr ctrl.Manager) error {
 	name := strings.ToLower(fmt.Sprintf("defaulter.%s.%s.%s",
 		storagev1alpha1.BucketKind,
-		cloudscalev1alpha1.S3BucketKind,
-		cloudscalev1alpha1.Group))
+		cloudscaleStoragev1alpha1.S3BucketKind,
+		storagev1alpha1.Group))
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
@@ -81,7 +88,7 @@ func (c *BucketClaimDefaultingController) SetupWithManager(mgr ctrl.Manager) err
 		))).
 		Complete(resource.NewClaimDefaultingReconciler(mgr,
 			resource.ClaimKind(storagev1alpha1.BucketGroupVersionKind),
-			resource.ClassKind(cloudscalev1alpha1.S3BucketClassGroupVersionKind),
+			resource.ClassKind(cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind),
 		))
 }
 
@@ -93,19 +100,19 @@ type BucketClaimController struct{}
 func (c *BucketClaimController) SetupWithManager(mgr ctrl.Manager) error {
 	name := strings.ToLower(fmt.Sprintf("%s.%s.%s",
 		storagev1alpha1.BucketKind,
-		cloudscalev1alpha1.S3BucketKind,
-		cloudscalev1alpha1.Group))
+		cloudscaleStoragev1alpha1.S3BucketKind,
+		storagev1alpha1.Group))
 
 	p := resource.NewPredicates(resource.AnyOf(
-		resource.HasClassReferenceKind(resource.ClassKind(cloudscalev1alpha1.S3BucketClassGroupVersionKind)),
-		resource.HasManagedResourceReferenceKind(resource.ManagedKind(cloudscalev1alpha1.S3BucketGroupVersionKind)),
-		resource.IsManagedKind(resource.ManagedKind(cloudscalev1alpha1.S3BucketGroupVersionKind), mgr.GetScheme()),
+		resource.HasClassReferenceKind(resource.ClassKind(cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind)),
+		resource.HasManagedResourceReferenceKind(resource.ManagedKind(cloudscaleStoragev1alpha1.S3BucketGroupVersionKind)),
+		resource.IsManagedKind(resource.ManagedKind(cloudscaleStoragev1alpha1.S3BucketGroupVersionKind), mgr.GetScheme()),
 	))
 
 	r := resource.NewClaimReconciler(mgr,
 		resource.ClaimKind(storagev1alpha1.BucketGroupVersionKind),
-		resource.ClassKind(cloudscalev1alpha1.S3BucketClassGroupVersionKind),
-		resource.ManagedKind(cloudscalev1alpha1.S3BucketGroupVersionKind),
+		resource.ClassKind(cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind),
+		resource.ManagedKind(cloudscaleStoragev1alpha1.S3BucketGroupVersionKind),
 		resource.WithManagedBinder(resource.NewAPIManagedStatusBinder(mgr.GetClient(), mgr.GetScheme())),
 		resource.WithManagedFinalizer(resource.NewAPIManagedStatusUnbinder(mgr.GetClient())),
 		resource.WithManagedConfigurators(
@@ -115,7 +122,7 @@ func (c *BucketClaimController) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(name).
-		Watches(&source.Kind{Type: &cloudscalev1alpha1.S3Bucket{}}, &resource.EnqueueRequestForClaim{}).
+		Watches(&source.Kind{Type: &cloudscaleStoragev1alpha1.S3Bucket{}}, &resource.EnqueueRequestForClaim{}).
 		For(&storagev1alpha1.Bucket{}).
 		WithEventFilter(p).
 		Complete(r)
@@ -130,21 +137,21 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 		return errors.Errorf("expected resource claim %s to be %s", cm.GetName(), storagev1alpha1.BucketGroupVersionKind)
 	}
 
-	s3BucketClass, csok := cs.(*cloudscalev1alpha1.S3BucketClass)
+	s3BucketClass, csok := cs.(*cloudscaleStoragev1alpha1.S3BucketClass)
 	if !csok {
-		return errors.Errorf("expected resource class %s to be %s", cs.GetName(), cloudscalev1alpha1.S3BucketClassGroupVersionKind)
+		return errors.Errorf("expected resource class %s to be %s", cs.GetName(), cloudscaleStoragev1alpha1.S3BucketClassGroupVersionKind)
 	}
 
-	s3Bucket, mgok := mg.(*cloudscalev1alpha1.S3Bucket)
+	s3Bucket, mgok := mg.(*cloudscaleStoragev1alpha1.S3Bucket)
 	if !mgok {
-		return errors.Errorf("expected managed resource %s to be %s", mg.GetName(), cloudscalev1alpha1.S3BucketGroupVersionKind)
+		return errors.Errorf("expected managed resource %s to be %s", mg.GetName(), cloudscaleStoragev1alpha1.S3BucketGroupVersionKind)
 	}
 
-	spec := &cloudscalev1alpha1.S3BucketSpec{
+	spec := &cloudscaleStoragev1alpha1.S3BucketSpec{
 		ResourceSpec: runtimev1alpha1.ResourceSpec{
 			ReclaimPolicy: runtimev1alpha1.ReclaimRetain,
 		},
-		S3BucketParameters: s3BucketClass.SpecTemplate.S3BucketParameters,
+		ForProvider: s3BucketClass.SpecTemplate.ForProvider,
 	}
 
 	if s3BucketClass.SpecTemplate.ReclaimPolicy != "" {
@@ -152,7 +159,11 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 	}
 
 	if bucketClaim.Spec.Name != "" {
-		spec.NameFormat = bucketClaim.Spec.Name
+		spec.ForProvider.NameFormat = &bucketClaim.Spec.Name
+	}
+
+	if bucketClaim.Spec.PredefinedACL != nil {
+		spec.ForProvider.CannedACL = translateACL(bucketClaim.Spec.PredefinedACL)
 	}
 
 	spec.WriteConnectionSecretToReference = &runtimev1alpha1.SecretReference{
@@ -165,4 +176,15 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 	s3Bucket.Namespace = bucketClaim.Namespace
 
 	return nil
+}
+
+func translateACL(acl *storagev1alpha1.PredefinedACL) *string {
+	if acl == nil {
+		return nil
+	}
+	s3acl, found := s3ACL[*acl]
+	if !found {
+		return nil
+	}
+	return &s3acl
 }

@@ -7,7 +7,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - cloudscale.crossplane.io
+  - storage.cloudscale.crossplane.io
   resources:
   - s3buckets
   verbs:
@@ -19,7 +19,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - cloudscale.crossplane.io
+  - storage.cloudscale.crossplane.io
   resources:
   - s3buckets/status
   verbs:

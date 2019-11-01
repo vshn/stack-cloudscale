@@ -24,7 +24,7 @@ import (
 
 const (
 	// Group is the group of the objects
-	Group = "cloudscale.crossplane.io"
+	Group = "storage.cloudscale.crossplane.io"
 
 	// Version is the version of the objects
 	Version = "v1alpha1"
@@ -41,12 +41,21 @@ var (
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 
-	// ProviderKind is a convenience variable for the kind string
-	ProviderKind = reflect.TypeOf(Provider{}).Name()
+	// S3BucketKind is a convenience variable for the kind string
+	S3BucketKind = reflect.TypeOf(S3Bucket{}).Name()
 
-	// ProviderKindAPIVersion is a convenience variable for the API version string
-	ProviderKindAPIVersion = ProviderKind + "." + GroupVersion.String()
+	// S3BucketKindAPIVersion is a convenience variable for the API version string
+	S3BucketKindAPIVersion = S3BucketKind + "." + GroupVersion.String()
 
-	// ProviderGroupVersionKind is a convenience variable to generate the GroupVersionKind
-	ProviderGroupVersionKind = GroupVersion.WithKind(ProviderKind)
+	// S3BucketGroupVersionKind is a convenience variable to generate the GroupVersionKind
+	S3BucketGroupVersionKind = GroupVersion.WithKind(S3BucketKind)
+
+	// S3BucketClassKind is a convenience variable for the kind string
+	S3BucketClassKind = reflect.TypeOf(S3BucketClass{}).Name()
+
+	// S3BucketClassKindAPIVersion is a convenience variable for the API version string
+	S3BucketClassKindAPIVersion = S3BucketClassKind + "." + GroupVersion.String()
+
+	// S3BucketClassGroupVersionKind is a convenience variable to generate the GroupVersionKind
+	S3BucketClassGroupVersionKind = GroupVersion.WithKind(S3BucketClassKind)
 )

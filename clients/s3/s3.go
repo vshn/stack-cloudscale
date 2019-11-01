@@ -44,7 +44,7 @@ func IsErrorNotFound(err error) bool {
 
 // Service defines S3 Client operations
 type Service interface {
-	CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, tags map[string]string) (*cloudscale.ObjectUser, error)
+	CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectUser, error)
 	GetBucketInfo(ctx context.Context, userID, bucketName string) (*cloudscale.ObjectUser, error)
 	DeleteBucket(ctx context.Context, userID, bucketName string) error
 }
@@ -69,10 +69,14 @@ func NewClient(ctx context.Context, cloudscaleToken string, httpClient *http.Cli
 
 // CreateOrUpdateBucket creates or updates the supplied S3 bucket with provided
 // specification
-func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, tags map[string]string) (*cloudscale.ObjectUser, error) {
+func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectUser, error) {
+	bucketTags := map[string]string{}
+	if tags != nil {
+		bucketTags = *tags
+	}
 	objectUserRequest := &cloudscale.ObjectUserRequest{
 		DisplayName: bucketName,
-		Tags:        tags,
+		Tags:        bucketTags,
 	}
 	var objectUser *cloudscale.ObjectUser
 	existingUser, err := c.getExistingBucketUser(ctx, userID, bucketName)
@@ -97,7 +101,7 @@ func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName st
 	if err != nil {
 		return nil, err
 	}
-	err = createS3Bucket(bucketName, accessKey, secretKey)
+	err = createS3Bucket(bucketName, accessKey, secretKey, cannedACL)
 	return objectUser, err
 }
 
@@ -153,11 +157,15 @@ func (c *Client) getExistingBucketUser(ctx context.Context, userID, bucketName s
 	return c.cloudscaleClient.ObjectUsers.Get(ctx, userID)
 }
 
-func createS3Bucket(bucketName, accessKey, secretKey string) error {
+func createS3Bucket(bucketName, accessKey, secretKey string, cannedACL *string) error {
+	acl := aws.String(s3.BucketCannedACLPrivate)
+	if cannedACL != nil {
+		acl = cannedACL
+	}
 	bucket := aws.String(bucketName)
 	cparams := &s3.CreateBucketInput{
 		Bucket: bucket,
-		ACL:    aws.String(s3.BucketCannedACLPrivate),
+		ACL:    acl,
 	}
 	s3Client := getS3Client(accessKey, secretKey)
 	_, err := s3Client.CreateBucket(cparams)
