@@ -16,8 +16,8 @@ limitations under the License.
 package main
 
 import (
-	"github.com/vshn/stack-cloudscale/api"
 	"flag"
+	"github.com/vshn/stack-cloudscale/api"
 	"os"
 
 	crossplaneapis "github.com/crossplaneio/crossplane/apis"

@@ -157,6 +157,9 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	if err != nil {
 		return resource.ExternalObservation{}, err
 	}
+	bucket.Status.AtProvider.ObjectUserID = bucketUser.ID
+	bucket.Status.AtProvider.BucketName = bucketUser.DisplayName
+	bucket.Status.AtProvider.Status = statusOnline
 
 	// Finally, we report what we know about the external resource. Any
 	// ConnectionDetails we return will be published to the managed resource's
