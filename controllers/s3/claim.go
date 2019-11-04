@@ -163,7 +163,7 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 	}
 
 	spec.WriteConnectionSecretToReference = &runtimev1alpha1.SecretReference{
-		Namespace: bucketClaim.Namespace, //s3BucketClass.SpecTemplate.WriteConnectionSecretsToNamespace,
+		Namespace: s3BucketClass.SpecTemplate.WriteConnectionSecretsToNamespace,
 		Name:      string(cm.GetUID()),
 	}
 	spec.ProviderReference = s3BucketClass.SpecTemplate.ProviderReference
