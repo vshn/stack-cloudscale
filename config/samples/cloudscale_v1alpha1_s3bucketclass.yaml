@@ -4,7 +4,6 @@ metadata:
   name: s3bucketclass-sample
 specTemplate:
   forProvider:
-    nameFormat: crossplane-%s
     cannedACL: private
     tags:
       class: s3bucketclass-sample

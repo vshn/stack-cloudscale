@@ -37,7 +37,6 @@ import (
 	"github.com/crossplaneio/crossplane-runtime/pkg/logging"
 	"github.com/crossplaneio/crossplane-runtime/pkg/meta"
 	"github.com/crossplaneio/crossplane-runtime/pkg/resource"
-	"github.com/crossplaneio/crossplane-runtime/pkg/util"
 	"github.com/vshn/stack-cloudscale/clients/s3"
 )
 
@@ -65,8 +64,7 @@ func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Complete(resource.NewManagedReconciler(mgr,
 			resource.ManagedKind(storagev1alpha1.S3BucketGroupVersionKind),
-			resource.WithExternalConnecter(&connecter{client: mgr.GetClient(), newS3Client: s3.NewClient}),
-			resource.WithManagedInitializers(resource.NewAPIManagedFinalizerAdder(mgr.GetClient()))))
+			resource.WithExternalConnecter(&connecter{client: mgr.GetClient(), newS3Client: s3.NewClient})))
 }
 
 // Connecter satisfies the resource.ExternalConnecter interface.
@@ -124,7 +122,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	}
 	log.Info("Observe", "bucket", bucket.Name)
 
-	bucketName := getBucketName(bucket)
+	bucketName := meta.GetExternalName(bucket)
 
 	bucketUser, err := e.s3Client.GetBucketInfo(ctx, bucket.Status.AtProvider.ObjectUserID, bucketName)
 
@@ -187,7 +185,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 	}
 	log.Info("Create", "bucket", bucket.Name)
 
-	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, meta.GetExternalName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	if err != nil {
 		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
 	}
@@ -217,7 +215,7 @@ func (e *external) Update(ctx context.Context, mg resource.Managed) (resource.Ex
 		return resource.ExternalUpdate{}, errors.New(errNotInstance)
 	}
 	log.Info("Update", "bucket", bucket.Name)
-	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, meta.GetExternalName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
 	return resource.ExternalUpdate{}, errors.Wrap(err, "cannot update instance")
 }
@@ -234,32 +232,9 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 	bucket.Status.AtProvider.Status = statusDeleting
 
 	// Delete the instance.
-	err := e.s3Client.DeleteBucket(ctx, bucket.Status.AtProvider.ObjectUserID, getBucketName(bucket))
+	err := e.s3Client.DeleteBucket(ctx, bucket.Status.AtProvider.ObjectUserID, meta.GetExternalName(bucket))
 	if err != nil && !s3.IsErrorNotFound(err) {
 		return errors.Wrap(err, "cannot delete instance")
 	}
 	return nil
-}
-
-// Generate bucket name based on the NameFormat spec value,
-// If name format is not provided, bucket name defaults to UID
-// If name format provided with '%s' value, bucket name will result in formatted string + UID,
-//   NOTE: only single %s substitution is supported
-// If name format does not contain '%s' substitution, i.e. a constant string, the
-// constant string value is returned back
-//
-// Examples:
-//   For all examples assume "UID" = "test-uid"
-//   1. NameFormat = "", BucketName = "test-uid"
-//   2. NameFormat = "%s", BucketName = "test-uid"
-//   3. NameFormat = "foo", BucketName = "foo"
-//   4. NameFormat = "foo-%s", BucketName = "foo-test-uid"
-//   5. NameFormat = "foo-%s-bar-%s", BucketName = "foo-test-uid-bar-%!s(MISSING)"
-func getBucketName(bucket *storagev1alpha1.S3Bucket) string {
-	bucketName := meta.GetExternalName(bucket)
-	if bucketName == "" {
-		bucketName = util.ConditionalStringFormat(util.StringValue(bucket.Spec.ForProvider.NameFormat), string(bucket.GetUID()))
-		meta.SetExternalName(bucket, bucketName)
-	}
-	return bucketName
 }

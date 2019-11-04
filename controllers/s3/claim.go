@@ -158,10 +158,6 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 		spec.ResourceSpec.ReclaimPolicy = s3BucketClass.SpecTemplate.ReclaimPolicy
 	}
 
-	if bucketClaim.Spec.Name != "" {
-		spec.ForProvider.NameFormat = &bucketClaim.Spec.Name
-	}
-
 	if bucketClaim.Spec.PredefinedACL != nil {
 		spec.ForProvider.CannedACL = translateACL(bucketClaim.Spec.PredefinedACL)
 	}

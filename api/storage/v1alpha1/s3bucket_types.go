@@ -24,12 +24,6 @@ import (
 // https://www.cloudscale.ch/en/api/v1#objects-users
 // https://docs.ceph.com/docs/bobtail/radosgw/s3/bucketops/
 type S3BucketParameters struct {
-	// NameFormat specifies the name of the external S3Bucket instance. The
-	// first instance of the string '%s' will be replaced with the Kubernetes
-	// UID of this S3Bucket. Omit this field to use the UID alone as the name.
-	// +optional
-	NameFormat *string `json:"nameFormat,omitempty"`
-
 	// Tags are optional key, value pairs to add to an S3 bucket
 	// +optional
 	Tags *map[string]string `json:"tags,omitempty"`
