@@ -9,5 +9,5 @@ specTemplate:
       class: s3bucketclass-sample
   providerRef:
     name: cloudscale-provider-sample
-  writeConnectionSecretsToNamespace: nonexistent
+  writeConnectionSecretsToNamespace: crossplane-cloudscale
   reclaimPolicy: Delete

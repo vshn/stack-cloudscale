@@ -57,7 +57,7 @@ type S3BucketStatus struct {
 
 // S3Bucket is the Schema for the s3buckets API
 // +kubebuilder:printcolumn:name="CLASS",type="string",JSONPath=".spec.classRef.name"
-// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status"
+// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.atProvider.status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status

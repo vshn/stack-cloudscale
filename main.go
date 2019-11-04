@@ -17,10 +17,10 @@ package main
 
 import (
 	"flag"
-	"github.com/vshn/stack-cloudscale/api"
 	"os"
 
 	crossplaneapis "github.com/crossplaneio/crossplane/apis"
+	"github.com/vshn/stack-cloudscale/api"
 	"github.com/vshn/stack-cloudscale/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
