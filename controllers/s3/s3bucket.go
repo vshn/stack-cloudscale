@@ -46,6 +46,8 @@ const (
 	statusOnline   = "Online"
 	statusCreating = "Creating"
 	statusDeleting = "Deleting"
+
+	resourceCredentialsSecretBucketname = "bucketname"
 )
 
 var log = logging.Logger.WithName("s3bucket_controller")
@@ -169,6 +171,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 			runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(accessKey),
 			runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(secretKey),
 			runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(cloudscale.S3Endpoint),
+			resourceCredentialsSecretBucketname:                  []byte(bucketName),
 		},
 	}
 
@@ -185,7 +188,8 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 	}
 	log.Info("Create", "bucket", bucket.Name)
 
-	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, meta.GetExternalName(bucket), bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
+	bucketName := meta.GetExternalName(bucket)
+	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, bucketName, bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	if err != nil {
 		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
 	}
@@ -201,6 +205,7 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 		runtimev1alpha1.ResourceCredentialsSecretUserKey:     []byte(accessKey),
 		runtimev1alpha1.ResourceCredentialsSecretPasswordKey: []byte(secretKey),
 		runtimev1alpha1.ResourceCredentialsSecretEndpointKey: []byte(cloudscale.S3Endpoint),
+		resourceCredentialsSecretBucketname:                  []byte(bucketName),
 	}
 
 	return resource.ExternalCreation{ConnectionDetails: cn}, nil
