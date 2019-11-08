@@ -7,6 +7,7 @@ specTemplate:
     cannedACL: private
     tags:
       class: s3bucketclass-sample
+    region: rma
   providerRef:
     name: cloudscale-provider-sample
   writeConnectionSecretsToNamespace: crossplane-cloudscale

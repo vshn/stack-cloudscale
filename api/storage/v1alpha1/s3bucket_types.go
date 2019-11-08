@@ -32,6 +32,10 @@ type S3BucketParameters struct {
 	// +kubebuilder:validation:Enum=private;public-read;public-read-write;authenticated-read
 	// +optional
 	CannedACL *string `json:"cannedACL,omitempty"`
+
+	// Region of the bucket.
+	// +kubebuilder:validation:Enum=lpg;rma
+	Region string `json:"region"`
 }
 
 // S3BucketSpec defines the desired state of S3Bucket

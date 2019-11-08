@@ -58,12 +58,20 @@ spec:
                   - public-read-write
                   - authenticated-read
                   type: string
+                region:
+                  description: Region of the bucket.
+                  enum:
+                  - lpg
+                  - rma
+                  type: string
                 tags:
                   additionalProperties:
                     type: string
                   description: Tags are optional key, value pairs to add to an S3
                     bucket
                   type: object
+              required:
+              - region
               type: object
             providerRef:
               description: ProviderReference specifies the provider that will be used

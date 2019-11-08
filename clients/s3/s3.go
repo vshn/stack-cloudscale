@@ -19,6 +19,7 @@ package s3
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -30,6 +31,9 @@ import (
 
 	cloudscale "github.com/cloudscale-ch/cloudscale-go-sdk"
 )
+
+// S3EndpointFormat is the endpoint for the S3 API without the region
+const S3EndpointFormat = "https://objects.%s.cloudscale.ch"
 
 // IsErrorNotFound helper function to test for BucketNotFound error
 func IsErrorNotFound(err error) bool {
@@ -44,9 +48,9 @@ func IsErrorNotFound(err error) bool {
 
 // Service defines S3 Client operations
 type Service interface {
-	CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectUser, error)
-	GetBucketInfo(ctx context.Context, userID, bucketName string) (*cloudscale.ObjectUser, error)
-	DeleteBucket(ctx context.Context, userID, bucketName string) error
+	CreateOrUpdateBucket(ctx context.Context, userID, bucketName, region string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectsUser, error)
+	GetBucketInfo(ctx context.Context, userID, bucketName, region string) (*cloudscale.ObjectsUser, error)
+	DeleteBucket(ctx context.Context, userID, bucketName, region string) error
 }
 
 // Client implements S3 Client
@@ -69,30 +73,30 @@ func NewClient(ctx context.Context, cloudscaleToken string, httpClient *http.Cli
 
 // CreateOrUpdateBucket creates or updates the supplied S3 bucket with provided
 // specification
-func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectUser, error) {
+func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName, region string, cannedACL *string, tags *map[string]string) (*cloudscale.ObjectsUser, error) {
 	bucketTags := map[string]string{}
 	if tags != nil {
 		bucketTags = *tags
 	}
-	objectUserRequest := &cloudscale.ObjectUserRequest{
+	objectUserRequest := &cloudscale.ObjectsUserRequest{
 		DisplayName: bucketName,
 		Tags:        bucketTags,
 	}
-	var objectUser *cloudscale.ObjectUser
-	existingUser, err := c.getExistingBucketUser(ctx, userID, bucketName)
+	var objectUser *cloudscale.ObjectsUser
+	existingUser, err := c.getExistingBucketUser(ctx, userID, bucketName, region)
 	if IsErrorNotFound(err) {
-		objectUser, err = c.cloudscaleClient.ObjectUsers.Create(ctx, objectUserRequest)
+		objectUser, err = c.cloudscaleClient.ObjectsUsers.Create(ctx, objectUserRequest)
 		if err != nil {
 			return nil, err
 		}
 	} else if err != nil {
 		return nil, err
 	} else {
-		err := c.cloudscaleClient.ObjectUsers.Update(ctx, existingUser.ID, objectUserRequest)
+		err := c.cloudscaleClient.ObjectsUsers.Update(ctx, existingUser.ID, objectUserRequest)
 		if err != nil {
 			return nil, err
 		}
-		objectUser, err = c.getExistingBucketUser(ctx, userID, bucketName)
+		objectUser, err = c.getExistingBucketUser(ctx, userID, bucketName, region)
 		if err != nil {
 			return nil, err
 		}
@@ -101,13 +105,13 @@ func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName st
 	if err != nil {
 		return nil, err
 	}
-	err = createS3Bucket(bucketName, accessKey, secretKey, cannedACL)
+	err = createS3Bucket(bucketName, region, accessKey, secretKey, cannedACL)
 	return objectUser, err
 }
 
 // GetBucketInfo returns the status of key bucket settings including user's policy version for permission status
-func (c *Client) GetBucketInfo(ctx context.Context, userID, bucketName string) (*cloudscale.ObjectUser, error) {
-	existingBucketUser, err := c.getExistingBucketUser(ctx, userID, bucketName)
+func (c *Client) GetBucketInfo(ctx context.Context, userID, bucketName, region string) (*cloudscale.ObjectsUser, error) {
+	existingBucketUser, err := c.getExistingBucketUser(ctx, userID, bucketName, region)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +120,7 @@ func (c *Client) GetBucketInfo(ctx context.Context, userID, bucketName string) (
 		return nil, err
 	}
 
-	s3Client := getS3Client(accessKey, secretKey)
+	s3Client := getS3Client(accessKey, secretKey, region)
 	hreq := &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
 	}
@@ -130,8 +134,8 @@ func (c *Client) GetBucketInfo(ctx context.Context, userID, bucketName string) (
 }
 
 // DeleteBucket deletes s3 bucket, and related User
-func (c *Client) DeleteBucket(ctx context.Context, userID, bucketName string) error {
-	existingBucketUser, err := c.getExistingBucketUser(ctx, userID, bucketName)
+func (c *Client) DeleteBucket(ctx context.Context, userID, bucketName, region string) error {
+	existingBucketUser, err := c.getExistingBucketUser(ctx, userID, bucketName, region)
 	if err != nil {
 		return err
 	}
@@ -139,14 +143,14 @@ func (c *Client) DeleteBucket(ctx context.Context, userID, bucketName string) er
 	if err != nil {
 		return err
 	}
-	err = deleteS3Bucket(bucketName, accessKey, secretKey)
+	err = deleteS3Bucket(bucketName, region, accessKey, secretKey)
 	if err != nil {
 		return err
 	}
-	return c.cloudscaleClient.ObjectUsers.Delete(ctx, existingBucketUser.ID)
+	return c.cloudscaleClient.ObjectsUsers.Delete(ctx, existingBucketUser.ID)
 }
 
-func (c *Client) getExistingBucketUser(ctx context.Context, userID, bucketName string) (*cloudscale.ObjectUser, error) {
+func (c *Client) getExistingBucketUser(ctx context.Context, userID, bucketName, region string) (*cloudscale.ObjectsUser, error) {
 	if userID == "" {
 		b, err := c.lookupUserByName(ctx, bucketName)
 		if err != nil {
@@ -154,10 +158,10 @@ func (c *Client) getExistingBucketUser(ctx context.Context, userID, bucketName s
 		}
 		userID = b.ID
 	}
-	return c.cloudscaleClient.ObjectUsers.Get(ctx, userID)
+	return c.cloudscaleClient.ObjectsUsers.Get(ctx, userID)
 }
 
-func createS3Bucket(bucketName, accessKey, secretKey string, cannedACL *string) error {
+func createS3Bucket(bucketName, region, accessKey, secretKey string, cannedACL *string) error {
 	acl := aws.String(s3.BucketCannedACLPrivate)
 	if cannedACL != nil {
 		acl = cannedACL
@@ -167,25 +171,25 @@ func createS3Bucket(bucketName, accessKey, secretKey string, cannedACL *string) 
 		Bucket: bucket,
 		ACL:    acl,
 	}
-	s3Client := getS3Client(accessKey, secretKey)
+	s3Client := getS3Client(accessKey, secretKey, region)
 	_, err := s3Client.CreateBucket(cparams)
 	return err
 }
 
-func deleteS3Bucket(bucketName, accessKey, secretKey string) error {
+func deleteS3Bucket(bucketName, region, accessKey, secretKey string) error {
 	dparams := &s3.DeleteBucketInput{
 		Bucket: aws.String(bucketName),
 	}
-	s3Client := getS3Client(accessKey, secretKey)
+	s3Client := getS3Client(accessKey, secretKey, region)
 	_, err := s3Client.DeleteBucket(dparams)
 	return err
 }
 
-func getS3Client(accessKey, secretKey string) *s3.S3 {
+func getS3Client(accessKey, secretKey, region string) *s3.S3 {
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(accessKey, secretKey, ""),
-		Endpoint:         aws.String(cloudscale.S3Endpoint),
-		Region:           aws.String("us-east-1"),
+		Endpoint:         aws.String(fmt.Sprintf(S3EndpointFormat, region)),
+		Region:           aws.String(region),
 		DisableSSL:       aws.Bool(false),
 		S3ForcePathStyle: aws.Bool(true),
 	}
@@ -193,8 +197,8 @@ func getS3Client(accessKey, secretKey string) *s3.S3 {
 	return s3.New(newSession)
 }
 
-func (c *Client) lookupUserByName(ctx context.Context, userName string) (*cloudscale.ObjectUser, error) {
-	objectUsers, err := c.cloudscaleClient.ObjectUsers.List(ctx)
+func (c *Client) lookupUserByName(ctx context.Context, userName string) (*cloudscale.ObjectsUser, error) {
+	objectUsers, err := c.cloudscaleClient.ObjectsUsers.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +218,7 @@ func (c *Client) lookupUserByName(ctx context.Context, userName string) (*clouds
 }
 
 // GetKeys returns the keys for a object user
-func GetKeys(objectUser *cloudscale.ObjectUser) (string, string, error) {
+func GetKeys(objectUser *cloudscale.ObjectsUser) (string, string, error) {
 	err := errors.New("Unexpected API return, keys found")
 	if len(objectUser.Keys) != 1 {
 		return "", "", err
