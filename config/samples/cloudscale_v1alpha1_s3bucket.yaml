@@ -9,7 +9,7 @@ spec:
     cannedACL: private
     tags:
       test: one
-    region: rma
+    region: lpg
   writeConnectionSecretToRef:
     name: s3sample-cred
     namespace: crossplane-cloudscale
