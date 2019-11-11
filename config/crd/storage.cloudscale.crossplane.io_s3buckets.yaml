@@ -22,7 +22,7 @@ spec:
     listKind: S3BucketList
     plural: s3buckets
     singular: s3bucket
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:
