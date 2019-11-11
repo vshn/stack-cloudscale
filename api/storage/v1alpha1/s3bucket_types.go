@@ -46,7 +46,6 @@ type S3BucketSpec struct {
 
 // S3BucketObservation is the representation of the current state that is observed.
 type S3BucketObservation struct {
-	Status       string `json:"status,omitempty"`
 	ObjectUserID string `json:"objectUserId,omitempty"`
 }
 
@@ -55,13 +54,14 @@ type S3BucketStatus struct {
 	runtimev1alpha1.ResourceStatus `json:",inline"`
 
 	AtProvider S3BucketObservation `json:"atProvider,omitempty"`
+	Status     string              `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
 // S3Bucket is the Schema for the s3buckets API
 // +kubebuilder:printcolumn:name="CLASS",type="string",JSONPath=".spec.classRef.name"
-// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.atProvider.status"
+// +kubebuilder:printcolumn:name="STATUS",type="string",JSONPath=".status.status"
 // +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status

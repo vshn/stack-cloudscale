@@ -51,14 +51,14 @@ const (
 
 var log = logging.Logger.WithName("s3bucket_controller")
 
-// BucketInstanceController is responsible for adding the S3Bucket
+// BucketController is responsible for adding the S3Bucket
 // controller and its corresponding reconciler to the manager with any runtime configuration.
-type BucketInstanceController struct{}
+type BucketController struct{}
 
 // SetupWithManager instantiates a new controller using a resource.ManagedReconciler
 // configured to reconcile S3Buckets using an ExternalClient produced by
 // connecter, which satisfies the ExternalConnecter interface.
-func (r *BucketInstanceController) SetupWithManager(mgr ctrl.Manager) error {
+func (r *BucketController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named(strings.ToLower(storagev1alpha1.S3BucketKindAPIVersion)).
 		For(&storagev1alpha1.S3Bucket{}).
@@ -97,7 +97,7 @@ func (c *connecter) Connect(ctx context.Context, mg resource.Managed) (resource.
 	s := &corev1.Secret{}
 	n := types.NamespacedName{Namespace: p.Spec.Secret.Namespace, Name: p.Spec.Secret.Name}
 	if err := c.client.Get(ctx, n, s); err != nil {
-		return nil, errors.Wrapf(err, "cannot get Provider secret %v", n.String())
+		return nil, errors.Wrapf(err, "cannot get Provider secret %s", n)
 	}
 
 	// Create and return a new S3 client using the credentials read from
@@ -131,15 +131,16 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 	// we want to let the resource.ManagedReconciler know so it can create it.
 	if s3.IsErrorNotFound(err) {
 		return resource.ExternalObservation{ResourceExists: false}, nil
-	} else if err != nil {
-		return resource.ExternalObservation{}, errors.Wrap(err, "cannot get instance")
+	}
+	if err != nil {
+		return resource.ExternalObservation{}, errors.Wrap(err, "cannot get bucket")
 	}
 
 	// Update our "Ready" status condition to reflect the status of the external
 	// resource. Most managed resources use the below well known reasons that
 	// the "Ready" status may be true or false, but managed resource authors
 	// are welcome to define and use their own.
-	switch bucket.Status.AtProvider.Status {
+	switch bucket.Status.Status {
 	case statusOnline:
 		// If the resource is available we also want to mark it as bindable to
 		// resource claims.
@@ -149,8 +150,6 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 		bucket.SetConditions(runtimev1alpha1.Creating())
 	case statusDeleting:
 		bucket.SetConditions(runtimev1alpha1.Deleting())
-	default:
-		bucket.Status.AtProvider.Status = statusCreating
 	}
 
 	accessKey, secretKey, err := s3.GetKeys(bucketUser)
@@ -158,7 +157,7 @@ func (e *external) Observe(ctx context.Context, mg resource.Managed) (resource.E
 		return resource.ExternalObservation{}, err
 	}
 	bucket.Status.AtProvider.ObjectUserID = bucketUser.ID
-	bucket.Status.AtProvider.Status = statusOnline
+	bucket.Status.Status = statusOnline
 
 	// Finally, we report what we know about the external resource. Any
 	// ConnectionDetails we return will be published to the managed resource's
@@ -186,15 +185,15 @@ func (e *external) Create(ctx context.Context, mg resource.Managed) (resource.Ex
 		return resource.ExternalCreation{}, errors.New(errNotInstance)
 	}
 	log.Info("Create", "bucket", bucket.Name)
+	bucket.Status.Status = statusCreating
 
 	bucketName := meta.GetExternalName(bucket)
 	objectUser, err := e.s3Client.CreateOrUpdateBucket(ctx, bucket.Status.AtProvider.ObjectUserID, bucketName, bucket.Spec.ForProvider.Region, bucket.Spec.ForProvider.CannedACL, bucket.Spec.ForProvider.Tags)
 	if err != nil {
-		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create instance")
+		return resource.ExternalCreation{}, errors.Wrap(err, "cannot create bucket")
 	}
 
 	bucket.Status.AtProvider.ObjectUserID = objectUser.ID
-	bucket.Status.AtProvider.Status = statusOnline
 
 	accessKey, secretKey, err := s3.GetKeys(objectUser)
 	if err != nil {
@@ -233,7 +232,7 @@ func (e *external) Delete(ctx context.Context, mg resource.Managed) error {
 	}
 	log.Info("Delete", "bucket", bucket.Name)
 	// Indicate that we're about to delete the instance.
-	bucket.Status.AtProvider.Status = statusDeleting
+	bucket.Status.Status = statusDeleting
 
 	// Delete the instance.
 	err := e.s3Client.DeleteBucket(ctx, bucket.Status.AtProvider.ObjectUserID, meta.GetExternalName(bucket), bucket.Spec.ForProvider.Region)

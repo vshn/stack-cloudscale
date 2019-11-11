@@ -84,14 +84,16 @@ func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName, r
 	}
 	var objectUser *cloudscale.ObjectsUser
 	existingUser, err := c.getExistingBucketUser(ctx, userID, bucketName, region)
-	if IsErrorNotFound(err) {
+
+	switch {
+	case IsErrorNotFound(err):
 		objectUser, err = c.cloudscaleClient.ObjectsUsers.Create(ctx, objectUserRequest)
 		if err != nil {
 			return nil, err
 		}
-	} else if err != nil {
+	case err != nil:
 		return nil, err
-	} else {
+	default:
 		err := c.cloudscaleClient.ObjectsUsers.Update(ctx, existingUser.ID, objectUserRequest)
 		if err != nil {
 			return nil, err
@@ -101,6 +103,7 @@ func (c *Client) CreateOrUpdateBucket(ctx context.Context, userID, bucketName, r
 			return nil, err
 		}
 	}
+
 	accessKey, secretKey, err := GetKeys(objectUser)
 	if err != nil {
 		return nil, err

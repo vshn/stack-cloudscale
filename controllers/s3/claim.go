@@ -167,7 +167,6 @@ func ConfigureS3Bucket(_ context.Context, cm resource.Claim, cs resource.Class, 
 	spec.ProviderReference = s3BucketClass.SpecTemplate.ProviderReference
 
 	s3Bucket.Spec = *spec
-	s3Bucket.Namespace = bucketClaim.Namespace
 
 	return nil
 }

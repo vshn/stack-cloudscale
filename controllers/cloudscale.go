@@ -30,7 +30,7 @@ func SetupWithManager(mgr ctrl.Manager) error {
 		&s3.BucketClaimSchedulingController{},
 		&s3.BucketClaimDefaultingController{},
 		&s3.BucketClaimController{},
-		&s3.BucketInstanceController{},
+		&s3.BucketController{},
 	}
 
 	for _, c := range controllers {

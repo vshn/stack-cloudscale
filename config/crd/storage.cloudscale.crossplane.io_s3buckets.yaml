@@ -10,7 +10,7 @@ spec:
   - JSONPath: .spec.classRef.name
     name: CLASS
     type: string
-  - JSONPath: .status.atProvider.status
+  - JSONPath: .status.status
     name: STATUS
     type: string
   - JSONPath: .metadata.creationTimestamp
@@ -223,8 +223,6 @@ spec:
               properties:
                 objectUserId:
                   type: string
-                status:
-                  type: string
               type: object
             bindingPhase:
               description: Phase represents the binding phase of a managed resource
@@ -270,6 +268,8 @@ spec:
                 - type
                 type: object
               type: array
+            status:
+              type: string
           type: object
       type: object
   version: v1alpha1
