@@ -1,0 +1,14 @@
+apiVersion: storage.cloudscale.crossplane.io/v1alpha1
+kind: S3BucketClass
+metadata:
+  name: s3bucketclass-sample
+specTemplate:
+  forProvider:
+    cannedACL: private
+    tags:
+      class: s3bucketclass-sample
+    region: rma
+  providerRef:
+    name: cloudscale-provider-sample
+  writeConnectionSecretsToNamespace: crossplane-cloudscale
+  reclaimPolicy: Delete

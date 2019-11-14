@@ -1,0 +1,22 @@
+title: Crossplane Cloudscale
+readme: ""
+overview: Infra stack for cloudscale.ch
+overviewShort: Infra stack for cloudscale.ch
+version: v0.0.1
+maintainers:
+- name: Simon Rüegg
+  email: simon.ruegg@vshn.ch
+owners:
+- name: Simon Rüegg
+  email: simon.ruegg@vshn.ch
+company: VSHN AG
+category: cloudscale
+keywords:
+ - cloudscale
+ - infra
+website: https://cloudscale.ch
+source: https://github.com/vshn/stack-cloudscale/
+permissionScope: Cluster
+license: Apache-2.0
+dependsOn:
+- crd: '*.storage.crossplane.io/v1alpha1'

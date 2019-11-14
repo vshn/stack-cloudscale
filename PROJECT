@@ -1,0 +1,13 @@
+version: "2"
+domain: cloudscale.crossplane.io
+repo: github.com/vshn/stack-cloudscale
+resources:
+- group: storage
+  version: v1alpha1
+  kind: S3Bucket
+- group: storage
+  version: v1alpha1
+  kind: S3BucketClass
+- group: cloudscale
+  version: v1alpha1
+  kind: Provider

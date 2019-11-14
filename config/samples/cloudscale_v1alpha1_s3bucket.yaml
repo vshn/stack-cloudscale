@@ -1,0 +1,18 @@
+apiVersion: storage.cloudscale.crossplane.io/v1alpha1
+kind: S3Bucket
+metadata:
+  name: s3bucket-sample
+  annotations:
+    crossplane.io/external-name: crossplane-test-bucket-1
+spec:
+  forProvider:
+    cannedACL: private
+    tags:
+      test: one
+    region: lpg
+  writeConnectionSecretToRef:
+    name: s3sample-cred
+    namespace: crossplane-cloudscale
+  providerRef:
+    name: cloudscale-provider-sample
+  reclaimPolicy: Delete

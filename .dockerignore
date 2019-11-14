@@ -1,0 +1,8 @@
+.git/
+config/
+bin/
+hack/
+*Makefile
+.*ignore
+*Dockerfile
+README.md

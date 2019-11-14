@@ -1,0 +1,9 @@
+apiVersion: cloudscale.crossplane.io/v1alpha1
+kind: Provider
+metadata:
+  name: cloudscale-provider-sample
+spec:
+  credentialsSecretRef:
+    name: cloudscale-credentials
+    key: token
+    namespace: crossplane-cloudscale
