@@ -119,7 +119,7 @@ stack-uninstall:
 
 # Build the docker image
 docker-build: bundle
-	docker build --file stack.Dockerfile . -t ${STACK_IMG}
+	DOCKER_BUILDKIT=1 docker build --file stack.Dockerfile . -t ${STACK_IMG}
 .PHONY: docker-build
 
 docker-push:

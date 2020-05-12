@@ -29,5 +29,6 @@ FROM docker.io/alpine:3.10
 COPY --from=builder /workspace/bin/manager /bin/manager
 COPY stack-package .
 
+USER 10001
 
 ENTRYPOINT ["/bin/manager"]
